@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spamlens: Check any message before you trust it</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f2f0fa;--card:#fff;--ink:#1d1848;--mute:#625d85;--line:#dcd8ef;--bad:#e0245e;--badbg:#ffe3ec;--mid:#c27a00;--midbg:#fff1cf;--ok:#0a8f8f;--okbg:#d9f4f2;--hl:#ffd84d;--hlink:#c9b8ff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#110e2b;--card:#1a1640;--ink:#ece9ff;--mute:#a49fd0;--line:#2f2a63;--bad:#ff5f8d;--badbg:#42182f;--mid:#ffc14d;--midbg:#3d2f10;--ok:#3fd6d0;--okbg:#0f3a3b;--hl:#6b5a00;--hlink:#43318f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#110e2b;--card:#1a1640;--ink:#ece9ff;--mute:#a49fd0;--line:#2f2a63;--bad:#ff5f8d;--badbg:#42182f;--mid:#ffc14d;--midbg:#3d2f10;--ok:#3fd6d0;--okbg:#0f3a3b;--hl:#6b5a00;--hlink:#43318f;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 "DM Sans",system-ui,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:22px 20px 56px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font:800 24px "Syne",sans-serif;letter-spacing:-.01em}
+.brand svg{width:34px;height:34px}
+button{font:500 14px "DM Sans",sans-serif;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer}
+button:hover{border-color:var(--ink)}
+:focus-visible{outline:3px solid var(--ok);outline-offset:2px}
+h1{font:800 clamp(34px,6.4vw,64px)/1.02 "Syne",sans-serif;letter-spacing:-.03em;margin:34px 0 10px;max-width:15ch}
+.sub{color:var(--mute);max-width:52ch;margin:0 0 26px}
+.grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;align-items:start}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
+.card h2{font:700 17px "Syne",sans-serif;margin:0 0 10px}
+.editor{position:relative;height:250px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg)}
+.editor:focus-within{border-color:var(--ok)}
+.editor textarea,.editor .back{position:absolute;inset:0;margin:0;padding:14px;font:400 17px/1.6 "DM Sans",sans-serif;letter-spacing:0;white-space:pre-wrap;word-wrap:break-word;overflow:auto;border:0;width:100%;height:100%}
+.editor textarea{resize:none;background:transparent;color:var(--ink);outline:none;caret-color:var(--ink);z-index:2}
+.editor .back{color:transparent;z-index:1;pointer-events:none}
+.back mark{color:transparent;border-radius:4px;background:var(--hl)}
+.back mark.l{background:var(--hlink)}
+.back mark.g{background:var(--okbg)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin:10px 2px 0}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:5px;vertical-align:-1px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
+.chips span{font-size:13px;color:var(--mute)}
+/* verdict */
+.verdict{border-radius:14px;padding:16px;background:var(--bg);transition:background .25s}
+.verdict.bad{background:var(--badbg)}.verdict.mid{background:var(--midbg)}.verdict.ok{background:var(--okbg)}
+.vhead{font:800 clamp(26px,4vw,34px)/1.1 "Syne",sans-serif;letter-spacing:-.02em;margin:0}
+.bad .vhead{color:var(--bad)}.mid .vhead{color:var(--mid)}.ok .vhead{color:var(--ok)}
+.vcat{margin:6px 0 0;color:var(--ink)}
+.gauge{position:relative;height:12px;border-radius:999px;margin:22px 0 6px;background:linear-gradient(90deg,var(--ok) 0 35%,var(--mid) 35% 65%,var(--bad) 65% 100%)}
+.needle{position:absolute;top:-7px;left:0;width:4px;height:26px;border-radius:2px;background:var(--ink);transform:translateX(-50%);transition:left .35s cubic-bezier(.3,1.4,.5,1)}
+.ticks{display:flex;justify-content:space-between;font-size:12px;color:var(--mute)}
+.score{font-size:14px;color:var(--mute);margin:10px 0 0}
+.todo{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);font-size:15px}
+.todo b{display:block;margin-bottom:2px}
+.teach{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.full{grid-column:1/-1}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:800px){.two{grid-template-columns:1fr}}
+ul.ev{list-style:none;margin:0;padding:0}
+ul.ev li{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 0;border-bottom:1px solid var(--line)}
+ul.ev li:last-child{border:0}
+ul.ev .n{font-weight:700}ul.ev .w{font-weight:700;font-variant-numeric:tabular-nums}
+ul.ev .d{grid-column:1/-1;color:var(--mute);font-size:14px}
+.up{color:var(--bad)}.down{color:var(--ok)}
+.empty{color:var(--mute);font-size:15px;margin:0}
+.hist{display:flex;flex-direction:column;gap:8px}
+.hist button{text-align:left;border-radius:12px;display:flex;justify-content:space-between;gap:10px;width:100%}
+.hist button span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{font-weight:700;flex:none}
+.tag.bad{color:var(--bad)}.tag.mid{color:var(--mid)}.tag.ok{color:var(--ok)}
+.foot{color:var(--mute);font-size:13px;margin-top:22px;max-width:70ch}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="brand"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="17" cy="17" r="11" fill="none" stroke="currentColor" stroke-width="4"/><path d="M26 26l10 10" stroke="var(--bad)" stroke-width="5" stroke-linecap="round"/><path d="M12 17l4 4 7-8" fill="none" stroke="var(--ok)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Spamlens</div>
+  <button id="theme" type="button">Switch theme</button>
+</header>
+
+<h1>Is that message safe to trust?</h1>
+<p class="sub">Paste any SMS, email or chat. Spamlens reads it as you type, highlights what looks suspicious, and tells you what to do next. Nothing leaves your device.</p>
+
+<div class="grid">
+  <section class="card">
+    <h2>Your message</h2>
+    <div class="editor">
+      <div class="back" id="back" aria-hidden="true"></div>
+      <textarea id="msg" aria-label="Message to check" placeholder="Paste or type a message here…" spellcheck="false"></textarea>
+    </div>
+    <div class="legend"><span><i style="background:var(--hl)"></i>Spam-like word</span><span><i style="background:var(--hlink)"></i>Link</span><span><i style="background:var(--okbg)"></i>Normal word</span></div>
+    <div class="chips" id="samples"><span>Try one:</span></div>
+  </section>
+
+  <section class="card" aria-live="polite">
+    <div class="verdict" id="verdict">
+      <p class="vhead" id="vhead">Waiting for a message</p>
+      <p class="vcat" id="vcat">Results appear here while you type.</p>
+    </div>
+    <div class="gauge" aria-hidden="true"><div class="needle" id="needle" style="left:50%"></div></div>
+    <div class="ticks" aria-hidden="true"><span>Safe</span><span>Be careful</span><span>Spam</span></div>
+    <p class="score" id="score">Spam score: —</p>
+    <div class="todo" id="todo" hidden></div>
+    <div class="teach" id="teach" hidden>
+      <button type="button" id="ts">This is spam: teach it</button>
+      <button type="button" id="th">This is fine: teach it</button>
+    </div>
+  </section>
+
+  <section class="card full two" style="padding:0;border:0;background:none">
+    <div class="card">
+      <h2>Why this score</h2>
+      <ul class="ev" id="ev"><li><p class="empty">Evidence shows up once you enter a message.</p></li></ul>
+    </div>
+    <div class="card">
+      <h2>Recent checks</h2>
+      <div class="hist" id="hist"><p class="empty">Messages you check appear here.</p></div>
+    </div>
+  </section>
+</div>
+<p class="foot" id="foot"></p>
+</div>
+
+<script>
+const SPAM=["WINNER! You have won $1000 cash. Claim now at http://bit.ly/prize123","Congratulations! You’ve been selected for a free iPhone. Click here to claim your reward","URGENT: Your bank account is suspended. Verify your KYC immediately at http://secure-bank-login.xyz","Your SBI account will be blocked today. Update PAN card now http://sbi-kyc-update.in","Free entry in our weekly draw! Text WIN to receive a free ringtone","Dear customer, share your OTP now to avoid account closure","Earn $5000 per week working from home. No experience needed. Apply now!!!","Get cheap loans approved in 5 minutes. No documents. Call now 9876543210","You have a pending refund of Rs 4,999. Click the link to receive your money","Act now! Limited time offer: 90% off luxury watches. Buy now","Your lottery ticket won 25 lakh rupees. Send your bank details to claim","Final notice: your package could not be delivered. Pay Rs 25 fee at http://courier-track.top","Lose 10kg in 7 days with this miracle pill. Order now, free shipping","Your UPI account is locked. Verify now or lose access http://upi-verify.club","Double your bitcoin in 24 hours, guaranteed profit. Invest now","FREE!! Claim your prize voucher now. Reply YES. Hurry!","Your electricity will be disconnected tonight. Call immediately to pay bill","Dear user your Netflix payment failed. Update card details http://netflix-billing.cc","You are pre-approved for a credit card with zero fee. Apply today click here","Make money fast! Join our trading group and get guaranteed returns"];
+const HAM=["Hey, are we still meeting for lunch tomorrow at 1?","Can you send me the notes from yesterday’s class?","I’ll be home by 7. Do you need anything from the store?","Happy birthday! Hope you have a wonderful day with your family","Meeting moved to 3pm in the conference room. Please bring the report","Thanks for your help with the project, I really appreciate it","Don’t forget to pick up the kids from school today","Your appointment with Dr. Rao is confirmed for Monday at 10 am","Call me when you get a chance, I want to talk about the weekend","The train is running late, I will reach the station around 8","Can we reschedule our call to Thursday afternoon?","I just uploaded the slides to the shared folder, take a look","Good luck with your interview tomorrow, you will do great","Mom said she will cook biryani on Sunday, are you coming?","Please review the pull request when you have time","Sorry I missed your call, I was in a meeting. What’s up?","Your order has been shipped and will arrive on Friday. Track it in the app","Reminder: team standup at 10:30 tomorrow","Thank you for the invoice. Payment will be processed on the 5th","The assignment is due next week, shall we work on it together?"];
+const stop=new Set("a an the is are was be to of in on at for and or it i you we my me your this that with as by so if".split(" "));
+const norm=t=>t.toLowerCase().replace(/https?:\/\/\S+|www\.\S+/g," urltoken ").replace(/[$₹]|\brs\.?\s?\d/g," currtoken ").replace(/\d{6,}/g," longnum ").replace(/\d+/g," num ");
+const tok=t=>(norm(t).match(/[a-z’']+/g)||[]).map(w=>w.replace(/’/g,"'")).filter(w=>!stop.has(w)&&w.length>1);
+let M;
+function train(){const c={spam:{},ham:{},ts:0,th:0},V=new Set();
+ const add=(t,k)=>tok(t).forEach(w=>{c[k][w]=(c[k][w]||0)+1;c[k=="spam"?"ts":"th"]++;V.add(w)});
+ SPAM.forEach(t=>add(t,"spam"));HAM.forEach(t=>add(t,"ham"));c.V=V.size;M=c}
+const llr=w=>Math.log((((M.spam[w]||0)+1)/(M.ts+M.V+1))/(((M.ham[w]||0)+1)/(M.th+M.V+1)));
+const known=w=>(M.spam[w]||0)+(M.ham[w]||0)>0;
+const RULES=[
+["Contains a link",t=>/https?:\/\/|www\./i.test(t),.9,"Scammers rely on links. Never tap one you didn’t expect."],
+["Suspicious web address",t=>/bit\.ly|tinyurl|\.(xyz|top|club|cc)\b|-(kyc|verify|login|update|billing)/i.test(t),1.6,"Real banks don’t use shortened links or lookalike domains."],
+["Pressure to act fast",t=>/\b(urgent|immediately|now|today|hurry|final notice|expires?|tonight|act now)\b/i.test(t),.9,"Urgency stops you from thinking. It’s a classic scam tactic."],
+["Too-good-to-be-true offer",t=>/\b(won|winner|prize|lottery|cash|reward|free|guaranteed|refund)\b/i.test(t),1.1,"You can’t win a contest you never entered."],
+["Asks for secrets",t=>/\b(otp|pin|cvv|password|bank details|card details|kyc|pan card)\b/i.test(t),1.5,"No genuine company asks for your OTP, PIN or password."],
+["Lots of exclamation marks",t=>(t.match(/!/g)||[]).length>=3,.8,"Shouting punctuation is common in mass-sent spam."],
+["Shouting in capitals",t=>{const l=t.replace(/[^a-z]/gi,"");return l.length>12&&l.replace(/[^A-Z]/g,"").length/l.length>.4},.9,"Heavy capitals are used to grab attention."],
+["Phone number to call",t=>/\b\d{10}\b/.test(t),.6,"Scam texts often push you to call a number."],
+["Sounds personal and normal",t=>/\b(lunch|dinner|tomorrow|meeting|thanks|thank you|sorry|mom|dad|birthday)\b/i.test(t)&&!/https?:/i.test(t),-1.2,"Everyday wording with no link is a good sign."]];
+const CATS=[
+["Bank or account phishing",/\b(kyc|otp|bank|account|blocked|suspended|verify|upi|pan)\b/i,"Don’t reply or tap the link. Call your bank using the number on your card or official app."],
+["Prize or lottery scam",/\b(won|winner|prize|lottery|gift|voucher|reward)\b/i,"Ignore it. Real prizes never ask for fees or personal details."],
+["Fake delivery or bill notice",/\b(package|courier|delivered|electricity|bill|disconnect)\b/i,"Check the order or bill in the official app, not through this message."],
+["Loan or investment bait",/\b(loan|bitcoin|invest|returns|profit|earn|trading)\b/i,"Guaranteed returns don’t exist. Don’t share documents or money."]];
+function analyze(text){const toks=tok(text),n=Math.max(1,toks.length);let s=0;const per={};
+ toks.forEach(w=>{const v=llr(w);s+=v;per[w]=v});let z=s/Math.sqrt(n)*1.1;const sigs=[];
+ RULES.forEach(([name,f,w,why])=>{if(f(text)){z+=w;sigs.push({name,w,why})}});
+ const p=1/(1+Math.exp(-(z-.2)));const cat=CATS.find(c=>c[1].test(text));return{p,sigs,per,cat}}
+const $=id=>document.getElementById(id),esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const hist=[];
+function paint(text,r){
+ $("back").innerHTML=esc(text).replace(/(https?:\/\/\S+|www\.\S+)|[A-Za-z’']+/g,(m,u)=>{
+  if(u)return'<mark class="l">'+m+'</mark>';
+  const w=m.toLowerCase().replace(/’/g,"'");if(stop.has(w)||!known(w))return m;
+  const v=llr(w);return v>.9?'<mark>'+m+'</mark>':v<-.9?'<mark class="g">'+m+'</mark>':m})+"\n";
+ $("back").scrollTop=$("msg").scrollTop}
+function level(p){return p>=.65?"bad":p>=.35?"mid":"ok"}
+function run(){
+ const text=$("msg").value;
+ if(!text.trim()){$("back").innerHTML="";$("verdict").className="verdict";$("vhead").textContent="Waiting for a message";$("vcat").textContent="Results appear here while you type.";
+  $("needle").style.left="50%";$("score").textContent="Spam score: —";$("todo").hidden=$("teach").hidden=true;
+  $("ev").innerHTML='<li><p class="empty">Evidence shows up once you enter a message.</p></li>';return}
+ const r=analyze(text),lv=level(r.p),pct=Math.round(r.p*100);paint(text,r);
+ $("verdict").className="verdict "+lv;
+ $("vhead").textContent=lv=="bad"?"Very likely spam":lv=="mid"?"Be careful with this one":"Looks safe";
+ $("vcat").textContent=lv=="ok"?"No strong scam signs found.":(r.cat?r.cat[0]+".":"This has several spam-like traits.");
+ $("needle").style.left=Math.max(2,Math.min(98,pct))+"%";
+ $("score").textContent="Spam score: "+pct+" out of 100";
+ $("todo").hidden=false;
+ $("todo").innerHTML="<b>What to do</b>"+(lv=="ok"?"Nothing special. If something still feels off, confirm with the sender another way.":(r.cat?r.cat[2]:"Don’t click links or share details. Verify with the sender through a channel you trust."));
+ $("teach").hidden=false;
+ const items=r.sigs.map(s=>'<li><span class="n">'+s.name+'</span><span class="w '+(s.w>0?"up":"down")+'">'+(s.w>0?"+":"")+s.w.toFixed(1)+'</span><span class="d">'+s.why+'</span></li>');
+ Object.entries(r.per).filter(([w])=>known(w)&&Math.abs(llr(w))>1.2).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,3).forEach(([w,v])=>items.push('<li><span class="n">Word “'+esc(w)+'”</span><span class="w '+(v>0?"up":"down")+'">'+(v>0?"+":"")+v.toFixed(1)+'</span><span class="d">'+(v>0?"Appears mostly in spam the model has seen.":"Appears mostly in normal messages.")+'</span></li>'));
+ $("ev").innerHTML=items.join("")||'<li><p class="empty">No strong signals either way.</p></li>';
+ clearTimeout(run.t);run.t=setTimeout(()=>{if(hist[0]&&hist[0].t==text)return;if(text.trim().length>12){hist.unshift({t:text,lv,pct});hist.length=Math.min(hist.length,5);drawHist()}},1500)}
+function drawHist(){const h=$("hist");h.innerHTML="";hist.forEach(x=>{const b=document.createElement("button");b.type="button";
+ b.innerHTML='<span></span><span class="tag '+x.lv+'">'+x.pct+'</span>';b.firstChild.textContent=x.t;b.onclick=()=>{$("msg").value=x.t;run()};h.appendChild(b)})}
+function learn(k){const t=$("msg").value.trim();if(!t)return;(k=="spam"?SPAM:HAM).push(t);train();run();$("foot").textContent="Learned from your correction. The model now uses "+(SPAM.length+HAM.length)+" examples this session."}
+[["Bank scam","URGENT: Your SBI account is blocked! Update KYC now at http://sbi-kyc-verify.xyz or lose access today!!!"],["Prize bait","Congratulations! You won a free gift card worth Rs 5000. Reply YES to claim your reward."],["Friend","Hey, I’ll be late for lunch tomorrow. Can we meet at 1:30 instead?"],["Order update","Your order has been shipped. Track it in the app."]].forEach(([n,t])=>{
+ const b=document.createElement("button");b.type="button";b.textContent=n;b.onclick=()=>{$("msg").value=t;run()};$("samples").appendChild(b)});
+$("msg").addEventListener("input",run);$("msg").addEventListener("scroll",()=>{$("back").scrollTop=$("msg").scrollTop});
+$("ts").onclick=()=>learn("spam");$("th").onclick=()=>learn("ham");
+$("theme").onclick=()=>{const d=document.documentElement;d.dataset.theme=getComputedStyle(d).colorScheme=="dark"?"light":"dark"};
+train();
+$("foot").textContent="Demo model: Naive Bayes on "+(SPAM.length+HAM.length)+" short examples plus scam-pattern rules. It can be wrong, so treat results as guidance. Your text stays in this page.";
+</script>
+</body>
+</html>
